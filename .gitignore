@@ -1,1 +1,1 @@
-*.DAT
+*.DAT #this will exclude all .DAT files but if we need to exclude specific file then use data.DAT
