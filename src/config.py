@@ -1,8 +1,3 @@
-"""
-Configuration settings for the sentiment classification system.
-Contains all hyperparameters and system settings.
-"""
-
 from dataclasses import dataclass
 from typing import List
 
@@ -13,7 +8,7 @@ RANDOM_SEED = 42
 # Dataset settings
 VOCAB_SIZE = 10000
 SEQUENCE_LENGTHS = [25, 50, 100]
-TRAIN_TEST_SPLIT = 0.5  # IMDb dataset comes pre-split
+TRAIN_TEST_SPLIT = 0.5
 
 # Model architecture settings
 EMBEDDING_DIM = 100
@@ -46,10 +41,10 @@ class ExperimentConfig:
     optimizer: str
     sequence_length: int
     gradient_clipping: bool
-    learning_rate: float = DEFAULT_LEARNING_RATE
+    learning_rate: float = LEARNING_RATE
     batch_size: int = BATCH_SIZE
-    epochs: int = DEFAULT_EPOCHS
-    dropout: float = DEFAULT_DROPOUT
+    epochs: int = EPOCHS
+    dropout: float = DROPOUT
 
 @dataclass
 class ExperimentResult:

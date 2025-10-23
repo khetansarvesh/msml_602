@@ -68,7 +68,6 @@ def main():
     vocabulary = sequence_processor.build_vocabulary(train_texts_clean, vocab_size=10000)
     vocab_size = len(vocabulary)
 
-    # Convert texts to integer sequences (tokens)
     # text to tokens [I am sarvesh] -> [12, 45, 678]
     train_sequences = sequence_processor.texts_to_sequences(train_texts_clean)
     test_sequences = sequence_processor.texts_to_sequences(test_texts_clean)
@@ -170,7 +169,6 @@ def main():
                         with csv_path.open('a', newline='') as csvfile:
                             writer = csv.writer(csvfile)
                             if write_header:
-                                # Add final loss and loss history columns
                                 writer.writerow(["Model", "Activation", "Optimizer", "Seq Length", "Grad Clipping", "Accuracy", "F1", "Epoch Time (s)", "Final Loss", "Loss History"])
 
                             writer.writerow([
@@ -186,7 +184,6 @@ def main():
                                 json.dumps(result.loss_history)
                             ])
 
-                        print(f"Saved experiment results to {csv_path}")
 
 if __name__ == '__main__':
     main()
