@@ -21,24 +21,12 @@ try:
 except LookupError:
     nltk.download('punkt', quiet=True)
 
-
-# Keep only the top 10,000 most frequent words.
-# Convert each review to a sequence of token IDs.
-# Pad or truncate sequences to fixed lengths of 25, 50, and 100 words (you will test these variations).
-
-
 class TextPreprocessor:
     
     def __init__(self):
-        """Initialize the text preprocessor."""
-        # Create translation table for punctuation removal
         self.punct_translator = str.maketrans('', '', string.punctuation)
     
     def clean_text(self, text: str) -> str:
-        """        
-        Args:text (str): Raw text to clean
-        Returns:str: Cleaned text with lowercase and no punctuation
-        """
         if not isinstance(text, str):
             text = str(text)
         
@@ -54,15 +42,7 @@ class TextPreprocessor:
         return text
     
     def tokenize(self, text: str) -> List[str]:
-        """
-        Tokenize text into individual words using NLTK tokenizer.
-        
-        Args:
-            text (str): Text to tokenize
-            
-        Returns:
-            List[str]: List of tokens (words)
-        """
+
         if not isinstance(text, str):
             text = str(text)
         
@@ -76,7 +56,6 @@ class TextPreprocessor:
         tokens = [token for token in tokens if token.strip()]
         
         return tokens
-
 
 class SequenceProcessor:
     
@@ -151,18 +130,13 @@ class SequenceProcessor:
         """
         Convert texts to sequences of token IDs using the built vocabulary.
         
-        Requirements addressed:
-        - 1.4: Convert each review to token ID sequences
-        
         Args:
             texts (List[str]): List of texts to convert
             
         Returns:
             List[List[int]]: List of token ID sequences
         """
-        if not self.word_to_idx:
-            raise ValueError("Vocabulary not built. Call build_vocabulary() first.")
-        
+
         sequences = []
         unknown_word_count = 0
         total_tokens = 0
@@ -192,93 +166,7 @@ class SequenceProcessor:
         
         return sequences
     
-    def process_sequences_with_validation(self, texts: List[str], sequence_length: int, 
-                                        show_stats: bool = True) -> Tuple[np.ndarray, Dict]:
-        """
-        Complete sequence processing pipeline with validation and statistics.
-        
-        This method combines text-to-sequence conversion, padding/truncation, and statistics
-        computation in a single call with validation.
-        
-        Args:
-            texts (List[str]): List of texts to process
-            sequence_length (int): Target sequence length (must be 25, 50, or 100)
-            show_stats (bool): Whether to print statistics
-            
-        Returns:
-            Tuple[np.ndarray, Dict]: Processed sequences and statistics
-        """
-        # Validate sequence length
-        self._validate_sequence_length(sequence_length)
-        
-        # Convert texts to sequences
-        sequences = self.texts_to_sequences(texts)
-        
-        # Get statistics before padding
-        stats = self.get_sequence_statistics(sequences)
-        
-        # Pad sequences to target length
-        padded_sequences = self.pad_sequences(sequences, sequence_length)
-        
-        # Add padding statistics
-        stats["target_length"] = sequence_length
-        stats["final_shape"] = padded_sequences.shape
-        
-        if show_stats:
-            self._print_sequence_statistics(stats)
-        
-        return padded_sequences, stats
-    
-    def _print_sequence_statistics(self, stats: Dict):
-        """
-        Print formatted sequence statistics.
-        
-        Args:
-            stats (Dict): Statistics dictionary from get_sequence_statistics
-        """
-        print(f"\n=== Sequence Statistics ===")
-        print(f"Total sequences: {stats['total_sequences']:,}")
-        print(f"Length range: {stats['min_length']} - {stats['max_length']} tokens")
-        print(f"Mean length: {stats['mean_length']:.1f} tokens")
-        print(f"Median length: {stats['median_length']:.1f} tokens")
-        print(f"Standard deviation: {stats['std_length']:.1f} tokens")
-        
-        print(f"\nLength percentiles:")
-        for pct, value in stats['length_percentiles'].items():
-            print(f"  {pct}: {value:.1f} tokens")
-        
-        print(f"\nLength distribution:")
-        for bin_range, count in stats['length_distribution'].items():
-            pct = (count / stats['total_sequences']) * 100
-            print(f"  {bin_range} tokens: {count:,} sequences ({pct:.1f}%)")
-        
-        if 'target_length' in stats:
-            target_length = stats['target_length']
-            truncation_info = stats['truncation_stats'][f'length_{target_length}']
-            print(f"\nPadding/Truncation for length {target_length}:")
-            print(f"  Truncated: {truncation_info['truncated']:,} ({truncation_info['truncated_pct']:.1f}%)")
-            print(f"  Padded: {truncation_info['padded']:,} ({truncation_info['padded_pct']:.1f}%)")
-            print(f"  Exact length: {truncation_info['exact']:,} ({truncation_info['exact_pct']:.1f}%)")
-            print(f"  Final shape: {stats['final_shape']}")
-        
-        print("=" * 30)
-    
     def pad_sequences(self, sequences: List[List[int]], max_length: int) -> np.ndarray:
-        """
-        Pad or truncate sequences to a fixed length.
-        
-        Requirements addressed:
-        - 1.5: Pad or truncate all sequences to specified length (25, 50, or 100)
-        
-        Args:
-            sequences (List[List[int]]): List of token ID sequences
-            max_length (int): Target sequence length
-            
-        Returns:
-            np.ndarray: Padded sequences array of shape (num_sequences, max_length)
-        """
-        # Validate sequence length parameter
-        self._validate_sequence_length(max_length)
         
         padded_sequences = np.full((len(sequences), max_length), self.PAD_IDX, dtype=np.int32)
         
@@ -291,179 +179,6 @@ class SequenceProcessor:
                 padded_sequences[i, :len(sequence)] = sequence
         
         return padded_sequences
-    
-    def _validate_sequence_length(self, sequence_length: int):
-        """
-        Validate that sequence length is one of the supported values.
-        
-        Args:
-            sequence_length (int): The sequence length to validate
-            
-        Raises:
-            ValueError: If sequence length is not 25, 50, or 100
-        """
-        valid_lengths = [25, 50, 100]
-        if sequence_length not in valid_lengths:
-            raise ValueError(f"Sequence length must be one of {valid_lengths}, got {sequence_length}")
-    
-    def get_sequence_statistics(self, sequences: List[List[int]]) -> Dict:
-        """
-        Compute comprehensive statistics about sequence lengths.
-        
-        Args:
-            sequences (List[List[int]]): List of token ID sequences
-            
-        Returns:
-            Dict: Dictionary containing sequence length statistics
-        """
-        if not sequences:
-            return {"error": "No sequences provided"}
-        
-        lengths = [len(seq) for seq in sequences]
-        
-        stats = {
-            "total_sequences": len(sequences),
-            "min_length": min(lengths),
-            "max_length": max(lengths),
-            "mean_length": np.mean(lengths),
-            "median_length": np.median(lengths),
-            "std_length": np.std(lengths),
-            "length_percentiles": {
-                "25th": np.percentile(lengths, 25),
-                "75th": np.percentile(lengths, 75),
-                "90th": np.percentile(lengths, 90),
-                "95th": np.percentile(lengths, 95)
-            },
-            "length_distribution": self._get_length_distribution(lengths),
-            "truncation_stats": self._get_truncation_stats(lengths)
-        }
-        
-        return stats
-    
-    def _get_length_distribution(self, lengths: List[int]) -> Dict:
-        """
-        Get distribution of sequence lengths in bins.
-        
-        Args:
-            lengths (List[int]): List of sequence lengths
-            
-        Returns:
-            Dict: Length distribution statistics
-        """
-        length_counts = Counter(lengths)
-        
-        # Create bins for common sequence lengths
-        bins = {
-            "0-10": 0,
-            "11-25": 0,
-            "26-50": 0,
-            "51-100": 0,
-            "101-200": 0,
-            "201-500": 0,
-            "500+": 0
-        }
-        
-        for length in lengths:
-            if length <= 10:
-                bins["0-10"] += 1
-            elif length <= 25:
-                bins["11-25"] += 1
-            elif length <= 50:
-                bins["26-50"] += 1
-            elif length <= 100:
-                bins["51-100"] += 1
-            elif length <= 200:
-                bins["101-200"] += 1
-            elif length <= 500:
-                bins["201-500"] += 1
-            else:
-                bins["500+"] += 1
-        
-        return bins
-    
-    def _get_truncation_stats(self, lengths: List[int]) -> Dict:
-        """
-        Get statistics about how many sequences would be truncated at different lengths.
-        
-        Args:
-            lengths (List[int]): List of sequence lengths
-            
-        Returns:
-            Dict: Truncation statistics for different sequence lengths
-        """
-        total_sequences = len(lengths)
-        
-        truncation_stats = {}
-        for target_length in [25, 50, 100]:
-            truncated_count = sum(1 for length in lengths if length > target_length)
-            padded_count = sum(1 for length in lengths if length < target_length)
-            exact_count = sum(1 for length in lengths if length == target_length)
-            
-            truncation_stats[f"length_{target_length}"] = {
-                "truncated": truncated_count,
-                "padded": padded_count,
-                "exact": exact_count,
-                "truncated_pct": (truncated_count / total_sequences) * 100,
-                "padded_pct": (padded_count / total_sequences) * 100,
-                "exact_pct": (exact_count / total_sequences) * 100
-            }
-        
-        return truncation_stats
-    
-    def get_vocabulary_stats(self) -> Dict:
-        """
-        Get statistics about the built vocabulary.
-        
-        Returns:
-            Dict: Vocabulary statistics
-        """
-        if not self.word_to_idx:
-            return {"error": "Vocabulary not built"}
-        
-        return {
-            "vocab_size": len(self.word_to_idx),
-            "total_words_seen": len(self.word_counts),
-            "most_common_words": self.word_counts.most_common(10),
-            "coverage": len(self.word_to_idx) / len(self.word_counts) if self.word_counts else 0
-        }
-    
-    def save_vocabulary(self, filepath: str):
-        """
-        Save vocabulary to file.
-        
-        Args:
-            filepath (str): Path to save vocabulary
-        """
-        vocab_data = {
-            'word_to_idx': self.word_to_idx,
-            'idx_to_word': self.idx_to_word,
-            'word_counts': dict(self.word_counts),
-            'vocab_size': self.vocab_size
-        }
-        
-        with open(filepath, 'wb') as f:
-            pickle.dump(vocab_data, f)
-        
-        print(f"Vocabulary saved to {filepath}")
-    
-    def load_vocabulary(self, filepath: str):
-        """
-        Load vocabulary from file.
-        
-        Args:
-            filepath (str): Path to load vocabulary from
-        """
-        with open(filepath, 'rb') as f:
-            vocab_data = pickle.load(f)
-        
-        self.word_to_idx = vocab_data['word_to_idx']
-        self.idx_to_word = vocab_data['idx_to_word']
-        self.word_counts = Counter(vocab_data['word_counts'])
-        self.vocab_size = vocab_data['vocab_size']
-        self.vocabulary = self.word_to_idx  # For backward compatibility
-        
-        print(f"Vocabulary loaded from {filepath}: {len(self.word_to_idx)} words")
-
 
 class IMDbDataLoader:
 

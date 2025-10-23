@@ -24,14 +24,8 @@ from src.models import SimpleRNN, LSTMModel, BidirectionalLSTMModel
 from src.train import Trainer
 from src.evaluate import ModelEvaluator
 
-
 def set_random_seeds(seed=42):
-    """
-    Set random seeds for reproducible results.
-    
-    Args:
-        seed (int): Random seed value (default: 42)
-    """
+
     # Set Python's built-in random seed
     random.seed(seed)
     
@@ -49,34 +43,9 @@ def set_random_seeds(seed=42):
     
     print(f"Random seeds set to {seed} for reproducible results")
 
-def get_device():
-    return torch.device('cpu')
-
-def prepare_data(train_texts_clean, test_texts_clean, train_labels, test_labels, sequence_length, batch_size) -> tuple:
-
-    sequence_processor = SequenceProcessor()
-    vocabulary = sequence_processor.build_vocabulary(train_texts_clean, vocab_size=10000)
-    
-    train_sequences = sequence_processor.texts_to_sequences(train_texts_clean)
-    test_sequences = sequence_processor.texts_to_sequences(test_texts_clean)
-
-    
-    train_sequences_padded = sequence_processor.pad_sequences(train_sequences, sequence_length)
-    test_sequences_padded = sequence_processor.pad_sequences(test_sequences, sequence_length)
-    
-    # Create data loaders
-    train_dataset = torch.utils.data.TensorDataset(torch.LongTensor(train_sequences_padded),torch.LongTensor(train_labels))
-    test_dataset = torch.utils.data.TensorDataset(torch.LongTensor(test_sequences_padded),torch.LongTensor(test_labels))
-    
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
-    
-    return train_loader, test_loader, len(vocabulary)
-
-
 def main():
 
-    device = get_device()
+    device = torch.device('cpu')
 
     print(f"Random seed: {RANDOM_SEED}")
     print(f"Device: {device}")
@@ -93,10 +62,26 @@ def main():
     train_texts_clean = [preprocessor.clean_text(text) for text in train_texts]
     test_texts_clean = [preprocessor.clean_text(text) for text in test_texts]
 
+    # Build vocabulary
+    sequence_processor = SequenceProcessor()
+    vocabulary = sequence_processor.build_vocabulary(train_texts_clean, vocab_size=10000)
+    vocab_size = len(vocabulary)
+
+    # text to tokens [I am sarvesh] -> [12, 45, 678]
+    train_sequences = sequence_processor.texts_to_sequences(train_texts_clean)
+    test_sequences = sequence_processor.texts_to_sequences(test_texts_clean)
     
     for exp_config in experiments:
-        # Prepare data
-        train_loader, test_loader, vocab_size = prepare_data(train_texts_clean, test_texts_clean, train_labels, test_labels, exp_config["sequence_length"], BATCH_SIZE)
+
+        # perform padding
+        train_sequences_padded = sequence_processor.pad_sequences(train_sequences, exp_config["sequence_length"])
+        test_sequences_padded = sequence_processor.pad_sequences(test_sequences, exp_config["sequence_length"])
+        
+        # Create data loaders
+        train_dataset = torch.utils.data.TensorDataset(torch.LongTensor(train_sequences_padded),torch.LongTensor(train_labels))
+        test_dataset = torch.utils.data.TensorDataset(torch.LongTensor(test_sequences_padded),torch.LongTensor(test_labels))
+        train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
+        test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False)
 
         # Create model
         model_kwargs = {
