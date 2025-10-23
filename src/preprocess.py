@@ -22,6 +22,14 @@ try:
 except LookupError:
     nltk.download('punkt', quiet=True)
 
+# Lowercase all text.
+# Remove punctuation and special characters.
+# Tokenize sentences (use Keras Tokenizer or nltk.word_tokenize).
+# Keep only the top 10,000 most frequent words.
+# Convert each review to a sequence of token IDs.
+# Pad or truncate sequences to fixed lengths of 25, 50, and 100 words (you will test these variations).
+
+
 class TextPreprocessor:
     """
     Handles text cleaning and normalization operations.
@@ -511,9 +519,6 @@ class IMDbDataLoader:
         self.filename = filename
         self.filepath = os.path.join(self.data_dir, self.filename)
 
-    def _read_csv(self) -> pd.DataFrame:
-        return pd.read_csv(self.filepath)
-
     def _standardize_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
         """Normalize expected columns to 'text' and 'sentiment'"""
         # Common column name mappings
@@ -548,48 +553,17 @@ class IMDbDataLoader:
         return df[['text', 'sentiment']]
 
     def load_data(self) -> Tuple[list, list, list, list]:
-        """
-        Load dataset and return train_texts, train_labels, test_texts, test_labels
 
-        Uses the predefined 50/50 split: first 25k rows train, next 25k rows test
-        when the CSV contains the standard 50k IMDB dataset layout.
-        If the CSV contains an explicit split column called 'type' or 'set', it will use it.
-        """
-        df = self._read_csv()
+        df = pd.read_csv(self.filepath)
 
-        # If there's an explicit column specifying train/test, use it
-        split_col = None
-        for candidate in ['type', 'set', 'split']:
-            if candidate in df.columns:
-                split_col = candidate
-                break
-
-        if split_col is not None:
-            # normalize values
-            df[split_col] = df[split_col].astype(str).str.lower()
-            train_df = df[df[split_col].str.contains('train')].reset_index(drop=True)
-            test_df = df[df[split_col].str.contains('test')].reset_index(drop=True)
-        else:
-            # Standard IMDB CSV is 50k rows: first 25k are train, next 25k test
-            if len(df) >= 50000:
-                train_df = df.iloc[:25000].reset_index(drop=True)
-                test_df = df.iloc[25000:50000].reset_index(drop=True)
-            else:
-                # If not 50k, do a 50/50 split by shuffle with fixed seed
-                set_random_seeds(RANDOM_SEED)
-                df_shuffled = df.sample(frac=1, random_state=RANDOM_SEED).reset_index(drop=True)
-                mid = len(df_shuffled) // 2
-                train_df = df_shuffled.iloc[:mid].reset_index(drop=True)
-                test_df = df_shuffled.iloc[mid:].reset_index(drop=True)
+        set_random_seeds(RANDOM_SEED)
+        df_shuffled = df.sample(frac=1, random_state=RANDOM_SEED).reset_index(drop=True)
+        mid = len(df_shuffled) // 2
+        train_df = df_shuffled.iloc[:mid].reset_index(drop=True)
+        test_df = df_shuffled.iloc[mid:].reset_index(drop=True)
 
         # Standardize and return lists
         train_df = self._standardize_dataframe(train_df)
         test_df = self._standardize_dataframe(test_df)
 
-        train_texts = train_df['text'].astype(str).tolist()
-        train_labels = train_df['sentiment'].astype(int).tolist()
-
-        test_texts = test_df['text'].astype(str).tolist()
-        test_labels = test_df['sentiment'].astype(int).tolist()
-
-        return train_texts, train_labels, test_texts, test_labels
+        return train_df['text'].astype(str).tolist(), train_df['sentiment'].astype(int).tolist(), test_df['text'].astype(str).tolist(), test_df['sentiment'].astype(int).tolist()
