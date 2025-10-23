@@ -52,51 +52,21 @@ def set_random_seeds(seed=42):
 def get_device():
     return torch.device('cpu')
 
-def prepare_data(
-    data_dir: str,
-    sequence_length: int,
-    batch_size: int,
-) -> tuple:
-    """
-    Prepare dataset and data loaders.
-    
-    Args:
-        data_dir: Directory for dataset storage
-        sequence_length: Maximum sequence length
-        batch_size: Batch size for data loaders
-        
-    Returns:
-        tuple: (train_loader, val_loader, test_loader, vocab_size)
-    """
+def prepare_data(train_texts_clean, test_texts_clean, train_labels, test_labels, sequence_length, batch_size) -> tuple:
 
-    # Load dataset
-    data_loader = IMDbDataLoader(data_dir=data_dir)
-    train_texts, train_labels, test_texts, test_labels = data_loader.load_data()
-    
-    # Preprocess text
-    preprocessor = TextPreprocessor()
-    train_texts_clean = [preprocessor.clean_text(text) for text in train_texts]
-    test_texts_clean = [preprocessor.clean_text(text) for text in test_texts]
-    
-    # Create sequences
     sequence_processor = SequenceProcessor()
     vocabulary = sequence_processor.build_vocabulary(train_texts_clean, vocab_size=10000)
     
     train_sequences = sequence_processor.texts_to_sequences(train_texts_clean)
     test_sequences = sequence_processor.texts_to_sequences(test_texts_clean)
+
     
     train_sequences_padded = sequence_processor.pad_sequences(train_sequences, sequence_length)
     test_sequences_padded = sequence_processor.pad_sequences(test_sequences, sequence_length)
     
     # Create data loaders
-    train_dataset = torch.utils.data.TensorDataset(
-        torch.LongTensor(train_sequences_padded),
-        torch.LongTensor(train_labels)
-    )
-    test_dataset = torch.utils.data.TensorDataset(
-        torch.LongTensor(test_sequences_padded),
-        torch.LongTensor(test_labels)
-    )
+    train_dataset = torch.utils.data.TensorDataset(torch.LongTensor(train_sequences_padded),torch.LongTensor(train_labels))
+    test_dataset = torch.utils.data.TensorDataset(torch.LongTensor(test_sequences_padded),torch.LongTensor(test_labels))
     
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
@@ -114,11 +84,19 @@ def main():
     # Set random seed
     set_random_seeds(RANDOM_SEED)
 
+    # Load dataset
+    data_loader = IMDbDataLoader(data_dir=DATA_DIR)
+    train_texts, train_labels, test_texts, test_labels = data_loader.load_data()
+    
+    # Preprocess text
+    preprocessor = TextPreprocessor()
+    train_texts_clean = [preprocessor.clean_text(text) for text in train_texts]
+    test_texts_clean = [preprocessor.clean_text(text) for text in test_texts]
+
     
     for exp_config in experiments:
-
         # Prepare data
-        train_loader, test_loader, vocab_size = prepare_data(DATA_DIR, exp_config.sequence_length, BATCH_SIZE)
+        train_loader, test_loader, vocab_size = prepare_data(train_texts_clean, test_texts_clean, train_labels, test_labels, exp_config["sequence_length"], BATCH_SIZE)
 
         # Create model
         model_kwargs = {

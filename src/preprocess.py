@@ -12,7 +12,6 @@ import nltk
 from nltk.tokenize import word_tokenize
 
 from .config import DATA_DIR, VOCAB_SIZE, RANDOM_SEED
-from .utils import set_random_seeds
 
 from typing import Tuple
 
@@ -22,18 +21,13 @@ try:
 except LookupError:
     nltk.download('punkt', quiet=True)
 
-# Lowercase all text.
-# Remove punctuation and special characters.
-# Tokenize sentences (use Keras Tokenizer or nltk.word_tokenize).
+
 # Keep only the top 10,000 most frequent words.
 # Convert each review to a sequence of token IDs.
 # Pad or truncate sequences to fixed lengths of 25, 50, and 100 words (you will test these variations).
 
 
 class TextPreprocessor:
-    """
-    Handles text cleaning and normalization operations.
-    """
     
     def __init__(self):
         """Initialize the text preprocessor."""
@@ -41,26 +35,17 @@ class TextPreprocessor:
         self.punct_translator = str.maketrans('', '', string.punctuation)
     
     def clean_text(self, text: str) -> str:
-        """
-        Clean and normalize text by converting to lowercase and removing punctuation.
-        
-        Requirements addressed:
-        - 1.1: Convert all text to lowercase
-        - 1.2: Remove all punctuation and special characters
-        
-        Args:
-            text (str): Raw text to clean
-            
-        Returns:
-            str: Cleaned text with lowercase and no punctuation
+        """        
+        Args:text (str): Raw text to clean
+        Returns:str: Cleaned text with lowercase and no punctuation
         """
         if not isinstance(text, str):
             text = str(text)
         
-        # Convert to lowercase (Requirement 1.1)
+        # Convert to lowercase
         text = text.lower()
         
-        # Remove punctuation and special characters (Requirement 1.2)
+        # Remove punctuation and special characters
         text = text.translate(self.punct_translator)
         
         # Remove extra whitespace
@@ -94,10 +79,6 @@ class TextPreprocessor:
 
 
 class SequenceProcessor:
-    """
-    Manages tokenization, vocabulary building, and sequence padding operations.
-    Implements requirements 1.3, 1.4, 1.5 for sequence processing.
-    """
     
     def __init__(self, vocab_size: int = VOCAB_SIZE):
         """
@@ -121,11 +102,6 @@ class SequenceProcessor:
     
     def build_vocabulary(self, texts: List[str], vocab_size: int = None) -> Dict[str, int]:
         """
-        Build vocabulary from texts using top most frequent words.
-        
-        Requirements addressed:
-        - 1.3: Use the top 10,000 most frequent words only
-        
         Args:
             texts (List[str]): List of texts to build vocabulary from
             vocab_size (int, optional): Maximum vocabulary size
@@ -489,29 +465,6 @@ class SequenceProcessor:
         print(f"Vocabulary loaded from {filepath}: {len(self.word_to_idx)} words")
 
 
-class SentimentDataset(Dataset):
-    """
-    PyTorch Dataset class for sentiment classification.
-    """
-    
-    def __init__(self, texts: List[str], labels: List[int]):
-        """
-        Initialize the dataset.
-        
-        Args:
-            texts (List[str]): List of text samples
-            labels (List[int]): List of sentiment labels (0 or 1)
-        """
-        self.texts = texts
-        self.labels = labels
-    
-    def __len__(self) -> int:
-        return len(self.texts)
-    
-    def __getitem__(self, idx: int) -> Tuple[str, int]:
-        return self.texts[idx], self.labels[idx]
-
-
 class IMDbDataLoader:
 
     def __init__(self, data_dir: str = DATA_DIR, filename: str = 'IMDB_Dataset.csv'):
@@ -556,7 +509,6 @@ class IMDbDataLoader:
 
         df = pd.read_csv(self.filepath)
 
-        set_random_seeds(RANDOM_SEED)
         df_shuffled = df.sample(frac=1, random_state=RANDOM_SEED).reset_index(drop=True)
         mid = len(df_shuffled) // 2
         train_df = df_shuffled.iloc[:mid].reset_index(drop=True)

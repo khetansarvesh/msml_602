@@ -437,8 +437,7 @@ class MetricsCalculator:
             'inference_time': calculate_stats(inference_times)
         }
 
-import
- csv
+import csv
 import json
 import os
 import platform
@@ -861,8 +860,7 @@ class ResultsLogger:
                     print(f"Deleted old result file: {file_path}")
                 except Exception as e:
                     print(f"Error deleting {file_path}: {e}")
-impor
-t matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 import seaborn as sns
 from matplotlib.figure import Figure
 from typing import Union
