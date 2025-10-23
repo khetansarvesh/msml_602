@@ -10,6 +10,7 @@ from datetime import datetime
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
+import csv
 
 import random
 import numpy as np
@@ -86,27 +87,27 @@ def main():
         # Create model
         model_kwargs = {
             'vocab_size': vocab_size,
-            'embedding_dim': 100,  # Fixed as per requirements
-            'hidden_size': 64,     # Fixed as per requirements
-            'num_layers': 2,       # Fixed as per requirements
-            'dropout': config.dropout,
-            'activation': config.activation
+            'embedding_dim': 100,
+            'hidden_size': 64,
+            'num_layers': 2,
+            'dropout': exp_config["dropout"],
+            'activation': exp_config["activation"],
         }
         
-        if config.architecture == 'rnn':
+        if exp_config['architecture'] == 'rnn':
             model = SimpleRNN(**model_kwargs)
-        elif config.architecture == 'lstm':
+        elif exp_config['architecture'] == 'lstm':
             model = LSTMModel(**model_kwargs)
-        elif config.architecture == 'bidirectional_lstm':
+        elif exp_config['architecture'] == 'bidirectional_lstm':
             model = BidirectionalLSTMModel(**model_kwargs)
 
 
         # Create trainer
         trainer = Trainer(
             model=model,
-            optimizer_type=config.optimizer,
-            learning_rate=config.learning_rate,
-            gradient_clipping=config.gradient_clipping,
+            optimizer_type=exp_config["optimizer"],
+            learning_rate=exp_config["learning_rate"],
+            gradient_clipping=exp_config["gradient_clipping"],
             device=device
         )
 
@@ -116,25 +117,18 @@ def main():
         start_time = time.time()
         epoch_metrics = trainer.train_multiple_epochs(
                                                         train_loader=train_loader,
-                                                        num_epochs=config.epochs,
-                                                        val_loader=val_loader,
+                                                        num_epochs=exp_config["epochs"],
+                                                        val_loader=None,
                                                         verbose=False
                                                     )
 
-        # result = runner.run_single_experiment(
-        #                                         config=ExperimentConfig(**exp_config),
-        #                                         train_loader=train_loader,
-        #                                         val_loader=None,
-        #                                         test_loader=test_loader,
-        #                                         vocab_size=vocab_size
-        #                                     )
         end_time = time.time()
     
 
         total_training_time = end_time - start_time
         
         # Calculate average epoch time
-        avg_epoch_time = total_training_time / config.epochs
+        avg_epoch_time = total_training_time / exp_config["epochs"]
 
         # Get training summary
         training_summary = trainer.get_training_summary()
@@ -150,7 +144,7 @@ def main():
             verbose=False
         )
         result = ExperimentResult(
-            config=config,
+            config=exp_config,
             accuracy=evaluation_metrics.accuracy,
             f1_score=evaluation_metrics.f1_score,
             avg_epoch_time=avg_epoch_time,
@@ -165,21 +159,45 @@ def main():
 
         # Save model
         experiment_id = f"exp_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-        models_dir = Path(models_dir)
+        models_dir = Path(MODELS_DIR)
         model_path = models_dir / f'{experiment_id}_model.pth'
         torch.save({
             'model_state_dict': model.state_dict(),
-            'config': asdict(config),
+            'config': exp_config,
             'result': asdict(result)
         }, model_path)
 
 
-        print(f"\nExperiment completed successfully!")
-        print(f"Results:")
-        print(f"  Accuracy: {result.accuracy:.4f}")
-        print(f"  F1-Score: {result.f1_score:.4f}")
-        print(f"  Avg Epoch Time: {result.avg_epoch_time:.2f}s")
-        print(f"  Total Time: {end_time - start_time:.2f}s")
+
+
+
+
+
+        # Save experiment summary to CSV in results folder
+        results_dir = Path(RESULTS_DIR)
+        csv_path = results_dir / 'experiments_summary.csv'
+        write_header = not csv_path.exists()
+
+        with csv_path.open('a', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            if write_header:
+                # Add final loss and loss history columns
+                writer.writerow(["Model", "Activation", "Optimizer", "Seq Length", "Grad Clipping", "Accuracy", "F1", "Epoch Time (s)", "Final Loss", "Loss History"])
+
+            writer.writerow([
+                exp_config.get('architecture', ''),
+                exp_config.get('activation', ''),
+                exp_config.get('optimizer', ''),
+                exp_config.get('sequence_length', ''),
+                'Yes' if exp_config.get('gradient_clipping') else 'No',
+                f"{result.accuracy:.4f}",
+                f"{result.f1_score:.4f}",
+                f"{result.avg_epoch_time:.2f}",
+                f"{result.final_loss:.4f}",
+                json.dumps(result.loss_history)
+            ])
+
+        print(f"Saved experiment results to {csv_path}")
 
 if __name__ == '__main__':
     main()

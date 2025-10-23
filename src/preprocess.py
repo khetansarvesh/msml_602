@@ -9,17 +9,15 @@ from collections import Counter
 import torch
 from torch.utils.data import Dataset, DataLoader
 import nltk
-from nltk.tokenize import word_tokenize
-
+from nltk.tokenize import word_tokenize, TreebankWordTokenizer
+import pickle
+from pathlib import Path
 from .config import DATA_DIR, VOCAB_SIZE, RANDOM_SEED
-
 from typing import Tuple
 
-# Download required NLTK data
-try:
-    nltk.data.find('tokenizers/punkt')
-except LookupError:
-    nltk.download('punkt', quiet=True)
+class SimpleSentTok:
+    def tokenize(self, s):
+        return [s]
 
 class TextPreprocessor:
     
@@ -49,8 +47,19 @@ class TextPreprocessor:
         # Clean text first
         cleaned_text = self.clean_text(text)
         
-        # Tokenize using NLTK
-        tokens = word_tokenize(cleaned_text)
+        # Tokenize using NLTK. If the punkt_tab data layout is missing
+        # (LookupError), fall back to a local pickled punkt model and a
+        # word tokenizer.
+        try:
+            tokens = word_tokenize(cleaned_text)
+        except LookupError:
+
+            # Use the fallback sentence tokenizer and then TreebankWordTokenizer
+            sentences = SimpleSentTok().tokenize(cleaned_text)
+            word_tok = TreebankWordTokenizer()
+            tokens = []
+            for sent in sentences:
+                tokens.extend(word_tok.tokenize(sent))
         
         # Filter out empty tokens
         tokens = [token for token in tokens if token.strip()]
