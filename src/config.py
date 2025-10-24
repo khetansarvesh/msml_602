@@ -22,8 +22,8 @@ LEARNING_RATE = 0.001
 EPOCHS = 10
 
 # Supported configurations
-ARCHITECTURES = ['rnn', 'lstm', 'bidirectional_lstm']
-ACTIVATION_FUNCTIONS = ['sigmoid', 'relu', 'tanh']
+ARCHITECTURES = ['bidirectional_lstm']
+ACTIVATION_FUNCTIONS = ['relu', 'tanh']
 OPTIMIZERS = ['adam', 'sgd', 'rmsprop']
 
 # File paths
