@@ -16,6 +16,7 @@ This project implements and compares multiple RNN variants (RNN, LSTM, Bidirecti
 
 ```
 ├── data/                    # Dataset storage (IMDb reviews)
+│   └── IMDB_Dataset.csv
 ├── src/                     # Source code modules
 │   ├── __init__.py
 │   ├── config.py           # Configuration classes and constants
@@ -23,239 +24,204 @@ This project implements and compares multiple RNN variants (RNN, LSTM, Bidirecti
 │   ├── models.py           # RNN model architectures
 │   ├── train.py            # Training infrastructure
 │   ├── evaluate.py         # Evaluation and metrics
-│   ├── experiment_runner.py # Experiment orchestration
-│   ├── results_aggregator.py # Results analysis
 │   └── utils.py            # Utility functions
 ├── results/                # Experimental results and plots
-├── models/                 # Trained model checkpoints
-├── train_main.py           # Main training script
-├── evaluate_main.py        # Model evaluation script
-├── analyze_results.py      # Results analysis script
+│   ├── experiments_summary.csv
+│   └── plots/
+├── models/                 # Trained model checkpoints (.pth files)
+├── runner.py               # Main training script
+├── plot_results.py         # Results visualization script
 ├── requirements.txt        # Python dependencies
-├── example_config.json     # Example configuration file
+├── report.md               # Detailed project report
 └── README.md
 ```
 
-## Requirements
+## Setup Instructions
 
-### Python Version
-- **Python 3.8 or higher** (tested with Python 3.8, 3.9, 3.10)
+### Prerequisites
 
-### Dependencies
-Install all required packages using:
+- **Python Version**: Python 3.8 or higher (tested with Python 3.8-3.12)
+- **Operating System**: Windows 10+, macOS 10.14+, or Linux
+- **Hardware**: 
+  - CPU: 2+ cores recommended
+  - RAM: 4-8 GB available memory
+  - Storage: 2+ GB free space
+
+### Installation
+
+1. **Clone the Repository**
+   ```bash
+   git clone <repository-url>
+   cd msml_602
+   ```
+
+2. **Create a Virtual Environment** (Recommended)
+   ```bash
+   # Using venv
+   python -m venv venv
+   source venv/bin/activate  # On Linux/macOS
+   # venv\Scripts\activate   # On Windows
+   
+   # Or using conda
+   conda create -n rnn_sentiment python=3.10
+   conda activate rnn_sentiment
+   ```
+
+3. **Install Dependencies**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+## How to Run
+
+### 1. Training Experiments
+
+The main training script is `runner.py`, which runs a comprehensive suite of experiments across different model configurations.
+
+#### Run All Experiments
 ```bash
-pip install -r requirements.txt
+python runner.py
 ```
 
-**Core Dependencies:**
-- `torch>=1.12.0` - PyTorch for neural network implementation
-- `numpy>=1.21.0` - Numerical computations
-- `pandas>=1.3.0` - Data manipulation and analysis
-- `matplotlib>=3.5.0` - Plotting and visualization
-- `nltk>=3.7` - Natural language processing toolkit
-- `scikit-learn>=1.1.0` - Machine learning metrics and utilities
+This will:
+- Test all combinations of architectures, activations, optimizers, sequence lengths, and gradient clipping settings
+- Train each configuration for 10 epochs (default)
+- Save trained models to `models/` directory
+- Log results to `results/experiments_summary.csv`
 
-### Additional Setup
-Download required NLTK data:
+#### Configuration Settings
+
+Default configurations (defined in `src/config.py`):
+- **Architectures**: `['bidirectional_lstm']` (can include 'rnn', 'lstm', 'bidirectional_lstm')
+- **Activation Functions**: `['relu', 'tanh']` (can include 'sigmoid')
+- **Optimizers**: `['adam', 'sgd', 'rmsprop']`
+- **Sequence Lengths**: `[25, 50, 100]`
+- **Gradient Clipping**: `[False, True]`
+- **Epochs**: `10`
+- **Batch Size**: `32`
+- **Learning Rate**: `0.001`
+- **Hidden Size**: `64`
+- **Embedding Dimension**: `100`
+
+#### Modify Experiment Configuration
+
+To customize experiments, edit `src/config.py`:
 ```python
-import nltk
-nltk.download('punkt')
+# Example: Test only LSTM with different optimizers
+ARCHITECTURES = ['lstm']
+ACTIVATION_FUNCTIONS = ['relu']
+OPTIMIZERS = ['adam', 'sgd', 'rmsprop']
+SEQUENCE_LENGTHS = [50]
+EPOCHS = 15
 ```
 
-## Usage
+### 2. Visualization and Analysis
 
-### 1. Training Models
+After training, generate plots to analyze the results:
 
-#### Single Experiment
-Run a single experiment with specific parameters:
 ```bash
-# Basic usage
-python train_main.py --single --architecture lstm --activation relu --optimizer adam
-
-# With custom parameters
-python train_main.py --single --architecture bidirectional_lstm --activation tanh \
-    --optimizer sgd --sequence-length 100 --learning-rate 0.01 --epochs 15
+python plot_results.py
 ```
 
-#### Systematic Experiments
-Run systematic experiments varying specific parameters:
-```bash
-# Vary architectures (keeping other parameters fixed)
-python train_main.py --systematic --vary architecture
+This script generates:
+- **Accuracy and F1 vs Sequence Length**: Shows performance trends across different sequence lengths
+- **Training Loss Curves**: Compares best and worst performing models
 
-# Vary multiple parameters
-python train_main.py --systematic --vary architecture activation optimizer
+Plots are saved to `results/plots/`:
+- `accuracy_f1_vs_seq_length.png`
+- `training_loss_best_worst.png`
 
-# With custom base configuration
-python train_main.py --systematic --vary sequence_length --epochs 20 --verbose
+### 3. Evaluating Individual Models
+
+To evaluate a specific trained model:
+
+```python
+import torch
+from src.evaluate import ModelEvaluator
+
+# Load a saved model
+checkpoint = torch.load('models/exp_20251024_000446_model.pth')
+model_state = checkpoint['model_state_dict']
+results = checkpoint['result']
+
+print(f"Accuracy: {results['accuracy']:.4f}")
+print(f"F1 Score: {results['f1_score']:.4f}")
 ```
 
-#### Batch Experiments from Configuration File
-Run multiple experiments from a JSON configuration file:
-```bash
-# Use example configuration
-python train_main.py --config example_config.json
+## Expected Runtime and Output Files
 
-# With custom settings
-python train_main.py --config my_experiments.json --save-models --verbose
-```
+### Runtime Estimates (CPU)
 
-**Configuration File Format:**
-```json
-{
-  "experiments": [
-    {
-      "architecture": "lstm",
-      "activation": "relu",
-      "optimizer": "adam",
-      "sequence_length": 50,
-      "gradient_clipping": false,
-      "learning_rate": 0.001,
-      "batch_size": 32,
-      "epochs": 10,
-      "dropout": 0.4
-    }
-  ]
-}
-```
+| Configuration | Per Epoch | 10 Epochs | Full Suite* |
+|---------------|-----------|-----------|-------------|
+| RNN, seq=25 | 30-45s | 5-8 min | - |
+| LSTM, seq=50 | 45-60s | 8-10 min | - |
+| BiLSTM, seq=100 | 60-90s | 10-15 min | - |
+| All combinations | - | - | 4-8 hours |
 
-### 2. Evaluating Models
-
-#### Evaluate Saved Model
-```bash
-# Evaluate specific model file
-python evaluate_main.py --model models/best_model.pth
-
-# With detailed metrics and timing analysis
-python evaluate_main.py --model models/lstm_relu_adam.pth --detailed-metrics --timing-analysis
-```
-
-#### Evaluate All Models in Directory
-```bash
-# Evaluate all models from experiment results
-python evaluate_main.py --results-dir results/batch_20240101_120000
-
-# Export results in different formats
-python evaluate_main.py --results-dir results/ --export-format excel --save-predictions
-```
-
-#### Compare Multiple Models
-```bash
-# Compare specific models
-python evaluate_main.py --compare --models model1.pth model2.pth model3.pth
-
-# With verbose output
-python evaluate_main.py --compare --models models/*.pth --verbose
-```
-
-### 3. Analyzing Results
-
-#### Basic Analysis
-```bash
-# Analyze all results in directory
-python analyze_results.py --results-dir results/
-
-# Analyze specific results file
-python analyze_results.py --results-file results/all_results.json
-```
-
-#### Advanced Analysis
-```bash
-# Compare specific parameters with statistical tests
-python analyze_results.py --results-dir results/ --compare-parameters architecture activation \
-    --statistical-tests --generate-plots
-
-# Find optimal configurations with constraints
-python analyze_results.py --results-dir results/ --find-optimal \
-    --constraints max_epoch_time=10.0 min_accuracy=0.85
-
-# Generate comprehensive report
-python analyze_results.py --results-dir results/ --generate-plots --report-format pdf \
-    --export-data --top-k 10
-```
-
-## Expected Runtime and Output
-
-### Training Performance
-- **Single Experiment**: 5-15 minutes (10 epochs, CPU)
-- **Systematic Experiments**: 1-3 hours (depends on parameter variations)
-- **Full Experimental Suite**: 4-8 hours (all combinations)
+*Full suite varies based on number of parameter combinations (default: 36 combinations with current config)
 
 ### Memory Requirements
-- **RAM**: 4-8 GB recommended
-- **Storage**: 1-2 GB for datasets and results
-- **GPU**: Optional (CPU-optimized implementation)
+- **RAM**: 4-8 GB recommended (minimum 2 GB)
+- **Storage**: 
+  - Dataset: ~130 MB (IMDB_Dataset.csv)
+  - Models: ~50-100 MB per saved model
+  - Results: ~10-50 MB
+  - Total: 2+ GB recommended
 
 ### Output Files
 
-#### Training Outputs
-- `results/experiment_YYYYMMDD_HHMMSS/`
-  - `experiment_results.json` - Detailed results with metrics
-  - `training_logs.txt` - Training progress logs
-  - `config.json` - Experiment configuration
-  - `plots/` - Training curves and visualizations
+#### 1. Training Results (`results/`)
+- **`experiments_summary.csv`**: Complete log of all experiments with columns:
+  - Model, Activation, Optimizer, Seq Length, Grad Clipping
+  - Accuracy, F1 Score
+  - Epoch Time (s), Final Loss
+  - Loss History (per-epoch training losses)
 
-#### Model Checkpoints
-- `models/` - Saved model weights (.pth files)
-- Naming convention: `{architecture}_{activation}_{optimizer}_{timestamp}.pth`
+Example row:
+```csv
+bidirectional_lstm,relu,adam,50,Yes,0.8542,0.8523,45.23,0.3124,"[0.693, 0.512, 0.421, ...]"
+```
 
-#### Analysis Outputs
-- `analysis_results/`
-  - `analysis_report_YYYYMMDD_HHMMSS.txt` - Comprehensive analysis report
-  - `processed_results_YYYYMMDD_HHMMSS.csv` - Processed experimental data
-  - `performance_distributions.png` - Performance distribution plots
-  - `{parameter}_comparison.png` - Parameter comparison plots
+#### 2. Model Checkpoints (`models/`)
+- **Naming Convention**: `exp_YYYYMMDD_HHMMSS_model.pth`
+- **Contents**: Each `.pth` file contains:
+  - `model_state_dict`: Trained model weights
+  - `result`: Experiment configuration and metrics
 
-## Hardware Requirements and Performance Notes
+Example:
+```
+models/exp_20251024_000446_model.pth
+models/exp_20251024_001249_model.pth
+...
+```
 
-### Minimum Requirements
-- **CPU**: 2+ cores, 2.0+ GHz
-- **RAM**: 4 GB available memory
-- **Storage**: 2 GB free space
-- **OS**: Windows 10+, macOS 10.14+, or Linux
+#### 3. Visualization Plots (`results/plots/`)
+- **`accuracy_f1_vs_seq_length.png`**: Performance metrics across sequence lengths
+- **`training_loss_best_worst.png`**: Training curves comparing best/worst models
 
-### Recommended Configuration
-- **CPU**: 4+ cores, 3.0+ GHz (Intel i5/i7 or AMD Ryzen 5/7)
-- **RAM**: 8+ GB available memory
-- **Storage**: 5+ GB free space (SSD preferred)
-
-### Performance Optimization
-- **CPU Training**: Optimized for multi-core CPU execution
-- **Batch Size**: Default 32 (adjust based on available memory)
-- **Sequence Length**: Shorter sequences (25-50) train faster than longer ones (100)
-- **Model Complexity**: LSTM > Bidirectional LSTM > RNN (in terms of training time)
-
-### Expected Training Times (CPU)
-| Configuration | Single Epoch | 10 Epochs | Full Suite |
-|---------------|--------------|-----------|------------|
-| RNN, seq=25   | 30-45s      | 5-8 min   | -          |
-| LSTM, seq=50  | 45-60s      | 8-10 min  | -          |
-| BiLSTM, seq=100| 60-90s     | 10-15 min | -          |
-| All combinations| -          | -         | 4-8 hours  |
+#### 4. Dataset (`data/`)
+- **`IMDB_Dataset.csv`**: IMDb movie reviews dataset (should be placed here before training)
 
 ## Reproducibility
 
 All experiments use fixed random seeds for consistent results:
 
 ```python
-# Fixed seeds used throughout
+# Fixed seeds used throughout (see src/config.py)
 RANDOM_SEED = 42
-torch.manual_seed(RANDOM_SEED)
-np.random.seed(RANDOM_SEED)
-random.seed(RANDOM_SEED)
 ```
 
-### Hardware Specifications Logging
-The system automatically logs hardware specifications in results:
-- CPU information and core count
-- Available memory
-- Python and package versions
-- Operating system details
+The `runner.py` script automatically sets all random seeds for:
+- Python's built-in `random` module
+- NumPy's random number generator
+- PyTorch's random number generator (CPU and CUDA)
+- PyTorch's cuDNN backend (deterministic mode)
 
 ### Reproducing Results
-1. Use identical Python environment (requirements.txt)
-2. Use same random seed (42)
-3. Use same dataset split (fixed train/test split)
+1. Use identical Python environment (`requirements.txt`)
+2. Use same dataset (`data/IMDB_Dataset.csv`)
+3. Use same random seed (42, set in `src/config.py`)
 4. Use same hyperparameters as documented in results
 
 ## Troubleshooting
@@ -263,39 +229,66 @@ The system automatically logs hardware specifications in results:
 ### Common Issues
 
 #### Memory Errors
-```bash
-# Reduce batch size
-python train_main.py --single --batch-size 16
-
-# Use shorter sequences
-python train_main.py --single --sequence-length 25
-```
+If you encounter out-of-memory errors:
+- **Reduce batch size**: Edit `BATCH_SIZE` in `src/config.py` (e.g., change from 32 to 16)
+- **Use shorter sequences**: Limit `SEQUENCE_LENGTHS = [25]` instead of `[25, 50, 100]`
+- **Close other applications** to free memory
 
 #### Slow Training
+- **Reduce epochs**: Set `EPOCHS = 5` in `src/config.py` for faster testing
+- **Test fewer configurations**: Limit `ARCHITECTURES` and `OPTIMIZERS` to fewer options
+- **Use simpler architecture**: Start with `['rnn']` or `['lstm']` only
+
+#### Missing Dependencies
 ```bash
-# Reduce epochs for testing
-python train_main.py --single --epochs 5
+# If you get import errors, reinstall dependencies
+pip install --upgrade -r requirements.txt
 
-# Use simpler architecture
-python train_main.py --single --architecture rnn
+# For NLTK data (if needed)
+python -c "import nltk; nltk.download('punkt')"
 ```
 
-#### NLTK Data Missing
-```python
-import nltk
-nltk.download('punkt')
-nltk.download('stopwords')  # Optional
-```
-
-#### Dataset Download Issues
-The IMDb dataset is automatically downloaded on first use. If download fails:
-1. Check internet connection
-2. Manually download from: https://ai.stanford.edu/~amaas/data/sentiment/
-3. Extract to `data/aclImdb/` directory
+#### Dataset Issues
+- Ensure `data/IMDB_Dataset.csv` exists in the data directory
+- The file should be approximately 65MB in size
+- Check file permissions if you get access errors
 
 ### Performance Tips
 1. **Use SSD storage** for faster data loading
-2. **Close other applications** to free memory
-3. **Use shorter sequences** for faster experimentation
-4. **Start with single experiments** before running full suites
-5. **Monitor system resources** during long experiments
+2. **Close resource-intensive applications** during training
+3. **Start with a small test**: Edit config to test one architecture first
+4. **Monitor system resources**: Use `htop` (Linux/Mac) or Task Manager (Windows)
+5. **Use shorter sequences initially**: Sequence length has significant impact on training time
+
+## Additional Information
+
+### Key Features
+- ✅ CPU-optimized implementation (no GPU required)
+- ✅ Reproducible experiments with fixed random seeds
+- ✅ Comprehensive logging of all experiment results
+- ✅ Automatic model checkpointing
+- ✅ Visualization tools for analysis
+- ✅ Gradient clipping for training stability
+
+### Project Configuration Files
+
+**`src/config.py`**: Central configuration for all experiments
+- Modify this file to change experiment parameters
+- Contains all hyperparameters and paths
+- Defines experiment grid search space
+
+**`requirements.txt`**: Python package dependencies
+- Pin specific versions for reproducibility
+- Install with `pip install -r requirements.txt`
+
+### Citation
+
+If you use this code in your research, please cite the project appropriately.
+
+## License
+
+[Add your license information here]
+
+## Contact
+
+[Add contact information or contribution guidelines here]
