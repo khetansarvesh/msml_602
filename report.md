@@ -1,12 +1,71 @@
-# RNN Sentiment Classification: Comprehensive Comparative Analysis
+## Project Report
 
-**A Systematic Evaluation of Recurrent Neural Network Architectures for Binary Sentiment Classification on the IMDb Movie Review Dataset**
+### 1. Dataset Summary
+**Dataset:** IMDB Movie Reviews (50,000 reviews)
+- **Preprocessing:**
+   - Lowercasing, removal of non-alphanumeric characters
+   - Tokenization (whitespace split)
+   - Padding/truncation to fixed sequence lengths (25, 50, 100)
+- **Statistics:**
+   - Average review length: 230.20 words
+   - Vocabulary size: 180,586 (full), limited to 10,000 for modeling
 
----
+### 2. Model Configuration
+- **Embedding dimension:** 100
+- **Hidden size:** 64
+- **Number of layers:** 2
+- **Dropout:** 0.4
+- **Batch size:** 32
+- **Epochs:** 10
+- **Optimizers:** Adam, SGD, RMSprop
+- **Sequence lengths:** 25, 50, 100
+- **Gradient clipping:** tested ON and OFF
+- **Activation functions:** sigmoid, relu and tanh
 
-## Executive Summary
+### 3. Comparative Analysis
+Results below are averaged over runs for each configuration (see `results/experiments_summary.csv`).
 
-This project presents a comprehensive comparative analysis of Recurrent Neural Network (RNN) architectures for sentiment classification using the IMDb Movie Review Dataset. We systematically evaluated three RNN variants (Basic RNN, LSTM, Bidirectional LSTM) across multiple configurations including different activation functions (Sigmoid, ReLU, Tanh), optimizers (Adam, SGD, RMSProp), sequence lengths (25, 50, 100), and gradient clipping strategies.
+| Model | Activation | Optimizer | Seq Length | Grad Clipping | Accuracy | F1    | Epoch Time (s) |
+|-------|------------|-----------|------------|---------------|----------|-------|---------------|
+| rnn   | relu       | rmsprop   | 50         | Yes           | 0.7047   | 0.7032| 12.22         |
+| rnn   | relu       | adam      | 25         | Yes           | 0.7049   | 0.7046| 8.13          |
+| rnn   | sigmoid    | rmsprop   | 25         | Yes           | 0.6948   | 0.6938| 7.43          |
+| rnn   | relu       | adam      | 50         | Yes           | 0.6952   | 0.6949| 13.14         |
+| rnn   | relu       | rmsprop   | 100        | No            | 0.6732   | 0.6656| 21.82         |
+| rnn   | sigmoid    | adam      | 100        | Yes           | 0.6745   | 0.6745| 23.25         |
+| ...   | ...        | ...       | ...        | ...           | ...      | ...   | ...           |
+
+**See `results/experiments_summary.csv` for all configurations.**
+
+#### Charts
+- Accuracy and F1 vs Sequence Length: ![Accuracy/F1 vs Seq Length](results/plots/accuracy_f1_vs_seq_length.png)
+- Training Loss (Best/Worst): ![Training Loss Best/Worst](results/plots/training_loss_best_worst.png)
+
+### 4. Discussion
+**Best Configuration:**
+- The best performing configuration (highest F1/Accuracy) was:
+   - Model: RNN, Activation: relu, Optimizer: adam, Sequence Length: 25, Gradient Clipping: Yes
+   - Accuracy: 0.7049, F1: 0.7046, Epoch Time: 8.13s
+
+**Effect of Sequence Length:**
+- Shorter sequence lengths (25) with proper regularization (dropout, gradient clipping) performed best, likely due to reduced overfitting and faster training.
+- Longer sequences increased training time but did not consistently improve accuracy or F1.
+
+**Effect of Optimizer:**
+- Adam and RMSprop outperformed SGD in both accuracy and F1, and converged faster.
+
+**Effect of Gradient Clipping:**
+- Gradient clipping improved stability and performance, especially for Adam and RMSprop, preventing exploding gradients and leading to higher F1/accuracy.
+
+### 5. Conclusion
+Under CPU constraints, the optimal configuration is:
+- **Model:** RNN with relu activation
+- **Optimizer:** Adam
+- **Sequence Length:** 25
+- **Gradient Clipping:** Yes
+- **Justification:** This setup achieved the highest F1 and accuracy with reasonable training time, balancing performance and efficiency for CPU-based training.
+
+
 
 ### Key Findings
 
@@ -18,53 +77,7 @@ This project presents a comprehensive comparative analysis of Recurrent Neural N
 
 ---
 
-## 1. Introduction
 
-### 1.1 Problem Statement
-
-Sentiment analysis is a fundamental task in natural language processing that involves determining the emotional tone or opinion expressed in text. With the exponential growth of user-generated content on social media, review platforms, and forums, automated sentiment classification has become crucial for businesses, researchers, and content moderators.
-
-### 1.2 Objectives
-
-This study aims to:
-
-1. **Compare RNN Architectures**: Evaluate the performance of Basic RNN, LSTM, and Bidirectional LSTM for binary sentiment classification
-2. **Analyze Hyperparameter Impact**: Investigate the effects of activation functions, optimizers, sequence lengths, and gradient clipping
-3. **Identify Optimal Configurations**: Determine the best-performing model configurations for different use cases
-4. **Provide Implementation Guidelines**: Offer practical recommendations for deploying RNN-based sentiment classifiers
-
-### 1.3 Scope and Limitations
-
-- **Dataset**: IMDb Movie Review Dataset (50,000 reviews, binary classification)
-- **Architectures**: Three RNN variants with consistent hyperparameters
-- **Evaluation Metrics**: Accuracy, F1-score, Precision, Recall, Training Time
-- **Hardware**: CPU-optimized implementation for accessibility
-- **Limitations**: Single dataset, binary classification only, English language only
-
----
-
-## 2. Literature Review and Background
-
-### 2.1 Recurrent Neural Networks
-
-Recurrent Neural Networks are designed to handle sequential data by maintaining hidden states that capture information from previous time steps. The basic RNN architecture suffers from vanishing gradient problems, limiting its ability to learn long-term dependencies.
-
-### 2.2 Long Short-Term Memory (LSTM)
-
-LSTM networks address the vanishing gradient problem through gating mechanisms:
-- **Forget Gate**: Determines what information to discard from cell state
-- **Input Gate**: Decides which values to update in cell state
-- **Output Gate**: Controls what parts of cell state to output
-
-### 2.3 Bidirectional LSTM
-
-Bidirectional LSTMs process sequences in both forward and backward directions, allowing the model to access both past and future context when making predictions.
-
-### 2.4 Sentiment Classification Applications
-
-Previous research has shown RNNs to be effective for sentiment analysis tasks, with LSTM variants typically outperforming basic RNNs on longer sequences and complex sentiment patterns.
-
----
 
 ## 3. Dataset and Preprocessing
 
@@ -102,46 +115,6 @@ Previous research has shown RNNs to be effective for sentiment analysis tasks, w
 
 ## 4. Methodology
 
-### 4.1 Model Architectures
-
-#### 4.1.1 Basic RNN
-```
-Embedding Layer (vocab_size=10000, embedding_dim=100)
-↓
-RNN Layer (hidden_size=64, num_layers=2)
-↓
-Dropout Layer (p=0.4)
-↓
-Linear Layer (hidden_size → 1)
-↓
-Sigmoid Activation
-```
-
-#### 4.1.2 LSTM
-```
-Embedding Layer (vocab_size=10000, embedding_dim=100)
-↓
-LSTM Layer (hidden_size=64, num_layers=2)
-↓
-Dropout Layer (p=0.4)
-↓
-Linear Layer (hidden_size → 1)
-↓
-Sigmoid Activation
-```
-
-#### 4.1.3 Bidirectional LSTM
-```
-Embedding Layer (vocab_size=10000, embedding_dim=100)
-↓
-Bidirectional LSTM Layer (hidden_size=64, num_layers=2)
-↓
-Dropout Layer (p=0.4)
-↓
-Linear Layer (hidden_size*2 → 1)
-↓
-Sigmoid Activation
-```
 
 ### 4.2 Experimental Design
 
@@ -172,22 +145,6 @@ Sigmoid Activation
 5. **Training Time**: Average time per epoch (seconds)
 6. **Efficiency Score**: Accuracy per minute of training time
 
-### 4.4 Hardware and Software Environment
-
-**Hardware Specifications:**
-- **CPU**: 8-core processor (Intel/AMD equivalent)
-- **Memory**: 16 GB RAM
-- **Storage**: SSD for faster data loading
-- **GPU**: Not used (CPU-optimized implementation)
-
-**Software Environment:**
-- **Python**: 3.9.7
-- **PyTorch**: 1.12.1
-- **NumPy**: 1.21.5
-- **Pandas**: 1.3.5
-- **Matplotlib**: 3.5.2
-- **Scikit-learn**: 1.1.1
-- **NLTK**: 3.7
 
 ---
 
